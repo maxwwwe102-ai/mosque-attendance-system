@@ -1,0 +1,710 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مسح الباركود - الهاتف</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        :root {
+            --primary: #1a5e1a;
+            --secondary: #f1c40f;
+            --success: #28a745;
+            --danger: #dc3545;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary) 0%, #0d3b0d 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+            header h1 {
+                font-size: 24px;
+                margin-bottom: 10px;
+            }
+
+        .scanner-container {
+            width: 100%;
+            height: 300px;
+            margin: 20px 0;
+            border: 3px solid white;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            background-color: black;
+        }
+
+        #scanner-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .scanner-guide {
+            width: 250px;
+            height: 250px;
+            border: 2px solid var(--secondary);
+            border-radius: 15px;
+            position: relative;
+        }
+
+            .scanner-guide::before {
+                content: '';
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+                border: 1px dashed rgba(255, 255, 255, 0.5);
+                border-radius: 10px;
+            }
+
+        .prayer-selector {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .prayer-btn {
+            padding: 12px 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+        }
+
+            .prayer-btn.active {
+                background-color: var(--secondary);
+                color: var(--primary);
+                border-color: var(--secondary);
+            }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary);
+            color: var(--primary);
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .result {
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            margin-top: 20px;
+            display: none;
+            text-align: center;
+        }
+
+            .result.success {
+                background-color: rgba(40, 167, 69, 0.2);
+                border: 2px solid var(--success);
+            }
+
+            .result.error {
+                background-color: rgba(220, 53, 69, 0.2);
+                border: 2px solid var(--danger);
+            }
+
+        .attendance-list {
+            margin-top: 30px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .attendance-item {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .sync-status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ccc;
+        }
+
+            .sync-dot.online {
+                background-color: var(--success);
+                animation: pulse 2s infinite;
+            }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sync-status" id="sync-status">
+            <div class="sync-dot" id="sync-dot"></div>
+            <span id="sync-text">جاري الاتصال...</span>
+        </div>
+
+        <header>
+            <h1><i class="fas fa-mosque"></i> مسح باركود الحضور</h1>
+            <p>وجه الكاميرا نحو باركود المصلّي للمسح</p>
+        </header>
+
+        <div class="prayer-selector">
+            <div class="prayer-btn active" data-prayer="الفجر">الفجر</div>
+            <div class="prayer-btn" data-prayer="الظهر">الظهر</div>
+            <div class="prayer-btn" data-prayer="العصر">العصر</div>
+            <div class="prayer-btn" data-prayer="المغرب">المغرب</div>
+            <div class="prayer-btn" data-prayer="العشاء">العشاء</div>
+        </div>
+
+        <div class="scanner-container">
+            <video id="scanner-video" playsinline></video>
+            <div class="scanner-overlay">
+                <div class="scanner-guide"></div>
+                <p style="margin-top: 15px; color: var(--secondary);">ضع الباركود داخل المربع</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="start-scanner" class="btn btn-primary">
+                <i class="fas fa-play"></i> بدء المسح
+            </button>
+            <button id="stop-scanner" class="btn btn-secondary" disabled>
+                <i class="fas fa-stop"></i> إيقاف
+            </button>
+        </div>
+
+        <div id="scanner-result" class="result"></div>
+
+        <div class="attendance-list" id="attendance-list">
+            <h3 style="margin-bottom: 15px; text-align: center;">آخر الحضور المسجل</h3>
+            <!-- سيتم تعبئته بالجافاسكريبت -->
+        </div>
+
+        <footer>
+            <p>نظام حضور المسجد - النسخة المتنقلة</p>
+            <p>المسح يعمل عبر الإنترنت مع المزامنة الفورية</p>
+        </footer>
+    </div>
+
+    <!-- مكتبة مسح الباركود -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+    <script>
+        // ============================================
+        // تطبيق المسح على الهاتف
+        // ============================================
+
+        // إعدادات Firebase (نفس إعدادات الكمبيوتر)
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-8QqPzCSosbe4D2sBaapLiLyiBF7qQK4",
+            authDomain: "mosque-attendance-fc985.firebaseapp.com",
+            projectId: "mosque-attendance-fc985",
+            storageBucket: "mosque-attendance-fc985.firebasestorage.app",
+            messagingSenderId: "326249455922",
+            appId: "1:326249455922:web:2863739c6a26a347ccf72b",
+            measurementId: "G-REMJK883NY"
+        };
+
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // حالة النظام
+        let scannerActive = false;
+        let videoStream = null;
+        let currentPrayer = 'الفجر';
+        let mosqueId = null;
+        let currentUser = null;
+
+        // عناصر DOM
+        const elements = {
+            scannerVideo: document.getElementById('scanner-video'),
+            startScannerBtn: document.getElementById('start-scanner'),
+            stopScannerBtn: document.getElementById('stop-scanner'),
+            prayerButtons: document.querySelectorAll('.prayer-btn'),
+            scannerResult: document.getElementById('scanner-result'),
+            attendanceList: document.getElementById('attendance-list'),
+            syncStatus: document.getElementById('sync-status'),
+            syncDot: document.getElementById('sync-dot'),
+            syncText: document.getElementById('sync-text')
+        };
+
+        // ============================================
+        // تهيئة النظام
+        // ============================================
+
+        async function initSystem() {
+            console.log('جاري تهيئة تطبيق الهاتف...');
+
+            // التحقق من وجود معرف المسجد في الرابط
+            const urlParams = new URLSearchParams(window.location.search);
+            mosqueId = urlParams.get('mosque') || 'guest';
+
+            // إعداد معالجات الأحداث
+            setupEventListeners();
+
+            // محاولة المصادقة التلقائية
+            await setupAuth();
+
+            // تحميل بيانات الحضور
+            loadAttendanceData();
+
+            console.log('تم تهيئة التطبيق بنجاح!');
+        }
+
+        function setupEventListeners() {
+            // أزرار الصلاة
+            elements.prayerButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    elements.prayerButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentPrayer = btn.dataset.prayer;
+                });
+            });
+
+            // المسح الضوئي
+            elements.startScannerBtn.addEventListener('click', startScanner);
+            elements.stopScannerBtn.addEventListener('click', stopScanner);
+
+            // تحديث تلقائي للحضور
+            setInterval(loadAttendanceData, 30000);
+        }
+
+        async function setupAuth() {
+            // محاولة تسجيل الدخول كزائر
+            try {
+                await auth.signInAnonymously();
+                currentUser = auth.currentUser;
+                updateSyncStatus(true, 'متصل بالسحابة');
+
+                // الاستماع للتغييرات في الحضور
+                setupRealtimeListener();
+
+            } catch (error) {
+                console.error('خطأ في المصادقة:', error);
+                updateSyncStatus(false, 'غير متصل');
+            }
+        }
+
+        function setupRealtimeListener() {
+            if (!mosqueId || mosqueId === 'guest') return;
+
+            // الاستماع لأحدث 10 سجلات حضور
+            db.collection('mosques').doc(mosqueId)
+                .collection('attendance')
+                .orderBy('timestamp', 'desc')
+                .limit(10)
+                .onSnapshot((snapshot) => {
+                    const attendanceData = [];
+                    snapshot.forEach(doc => {
+                        attendanceData.push(doc.data());
+                    });
+
+                    updateAttendanceList(attendanceData);
+                });
+        }
+
+        // ============================================
+        // المسح الضوئي
+        // ============================================
+
+        async function startScanner() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+
+                elements.scannerVideo.srcObject = videoStream;
+                elements.scannerVideo.play();
+
+                elements.startScannerBtn.disabled = true;
+                elements.stopScannerBtn.disabled = false;
+                scannerActive = true;
+
+                scanBarcode();
+
+            } catch (error) {
+                showMessage('خطأ في الوصول إلى الكاميرا', 'error');
+            }
+        }
+
+        function stopScanner() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+
+            elements.startScannerBtn.disabled = false;
+            elements.stopScannerBtn.disabled = true;
+            scannerActive = false;
+        }
+
+        function scanBarcode() {
+            if (!scannerActive) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            if (elements.scannerVideo.readyState === elements.scannerVideo.HAVE_ENOUGH_DATA) {
+                canvas.width = elements.scannerVideo.videoWidth;
+                canvas.height = elements.scannerVideo.videoHeight;
+
+                ctx.drawImage(elements.scannerVideo, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    processScannedBarcode(code.data);
+                }
+            }
+
+            if (scannerActive) {
+                requestAnimationFrame(scanBarcode);
+            }
+        }
+
+        async function processScannedBarcode(barcodeText) {
+            showMessage('جاري معالجة الباركود...', 'info');
+
+            try {
+                // البحث عن المصلّي في قاعدة البيانات
+                let musallee = null;
+
+                if (mosqueId && mosqueId !== 'guest') {
+                    // البحث في السحابة
+                    const snapshot = await db.collection('mosques').doc(mosqueId)
+                        .collection('musalleen')
+                        .where('barcode', '==', barcodeText)
+                        .limit(1)
+                        .get();
+
+                    if (!snapshot.empty) {
+                        snapshot.forEach(doc => {
+                            musallee = { id: doc.id, ...doc.data() };
+                        });
+                    }
+                }
+
+                if (musallee) {
+                    // تسجيل الحضور
+                    await registerAttendance(musallee);
+                } else {
+                    showMessage('باركود غير مسجل في النظام', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في معالجة الباركود:', error);
+                showMessage('خطأ في الاتصال بالسحابة', 'error');
+            }
+        }
+
+        async function registerAttendance(musallee) {
+            const now = new Date();
+            const attendanceRecord = {
+                id: Date.now().toString(),
+                musalleeId: musallee.id,
+                barcode: musallee.barcode,
+                name: musallee.name,
+                phone: musallee.phone || 'غير مسجل',
+                prayer: currentPrayer,
+                date: now.toISOString().split('T')[0],
+                time: now.toLocaleTimeString('ar-EG', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }),
+                timestamp: now.getTime(),
+                device: 'mobile',
+                synced: true
+            };
+
+            try {
+                // حفظ في السحابة
+                await db.collection('mosques').doc(mosqueId)
+                    .collection('attendance')
+                    .doc(attendanceRecord.id)
+                    .set({
+                        ...attendanceRecord,
+                        syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                // إضافة محلياً للقائمة
+                addAttendanceToUI(attendanceRecord);
+
+                // إظهار رسالة النجاح
+                showMessage(`تم تسجيل حضور ${musallee.name} لصلاة ${currentPrayer}`, 'success');
+
+                // إيقاف المسح مؤقتاً
+                if (scannerActive) {
+                    scannerActive = false;
+                    setTimeout(() => {
+                        if (videoStream) {
+                            scannerActive = true;
+                            scanBarcode();
+                        }
+                    }, 2000);
+                }
+
+            } catch (error) {
+                console.error('خطأ في حفظ الحضور:', error);
+                showMessage('خطأ في حفظ البيانات', 'error');
+            }
+        }
+
+        // ============================================
+        // عرض البيانات
+        // ============================================
+
+        async function loadAttendanceData() {
+            if (!mosqueId || mosqueId === 'guest') return;
+
+            try {
+                const snapshot = await db.collection('mosques').doc(mosqueId)
+                    .collection('attendance')
+                    .orderBy('timestamp', 'desc')
+                    .limit(10)
+                    .get();
+
+                const attendanceData = [];
+                snapshot.forEach(doc => {
+                    attendanceData.push(doc.data());
+                });
+
+                updateAttendanceList(attendanceData);
+
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الحضور:', error);
+            }
+        }
+
+        function updateAttendanceList(attendanceData) {
+            const container = elements.attendanceList;
+
+            // إزالة العنوان وإضافة العناصر
+            container.innerHTML = '<h3 style="margin-bottom: 15px; text-align: center;">آخر الحضور المسجل</h3>';
+
+            if (attendanceData.length === 0) {
+                container.innerHTML += `
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.5);">
+                        <i class="fas fa-clipboard-list" style="font-size: 40px; margin-bottom: 10px;"></i>
+                        <p>لا توجد سجلات حضور بعد</p>
+                    </div>
+                `;
+                return;
+            }
+
+            attendanceData.forEach(record => {
+                addAttendanceToUI(record);
+            });
+        }
+
+        function addAttendanceToUI(record) {
+            const item = document.createElement('div');
+            item.className = 'attendance-item';
+            item.innerHTML = `
+                <div class="avatar">${record.name.charAt(0)}</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: bold;">${record.name}</div>
+                    <div style="font-size: 14px; opacity: 0.8;">
+                        ${record.prayer} - ${record.time}
+                    </div>
+                </div>
+                <div style="font-size: 12px; text-align: left;">
+                    ${record.barcode}
+                </div>
+            `;
+
+            // إضافة في البداية
+            const container = elements.attendanceList;
+            const title = container.querySelector('h3');
+            if (title && title.nextSibling) {
+                container.insertBefore(item, title.nextSibling);
+            } else {
+                container.appendChild(item);
+            }
+
+            // تحديد عدد العناصر المسموح به (10 عناصر)
+            const items = container.querySelectorAll('.attendance-item');
+            if (items.length > 10) {
+                items[items.length - 1].remove();
+            }
+        }
+
+        // ============================================
+        // وظائف مساعدة
+        // ============================================
+
+        function showMessage(message, type) {
+            const result = elements.scannerResult;
+            result.textContent = message;
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+
+            setTimeout(() => {
+                result.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateSyncStatus(connected, message) {
+            elements.syncDot.className = connected ? 'sync-dot online' : 'sync-dot';
+            elements.syncText.textContent = message;
+        }
+
+        // ============================================
+        // بدء تشغيل التطبيق
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initSystem();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام حضور المسجد - النسخة السحابية</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a5e1a 0%, #0d3b0d 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            padding: 30px 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #f1c40f;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .cards {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            width: 300px;
+            text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+            .card:hover {
+                transform: translateY(-5px);
+                border-color: #f1c40f;
+            }
+
+            .card i {
+                font-size: 50px;
+                margin-bottom: 20px;
+                color: #f1c40f;
+            }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #f1c40f;
+            color: #1a5e1a;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+            .btn:hover {
+                background: #ffd700;
+                transform: scale(1.05);
+            }
+
+        .qrcode-section {
+            margin: 40px 0;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+        }
+
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .instructions {
+            text-align: right;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .instruction-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .number {
+            background: #f1c40f;
+            color: #1a5e1a;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .cards {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .card {
+                width: 100%;
+                max-width: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏛️ نظام حضور المسجد - النسخة السحابية</h1>
+            <p class="subtitle">نظام متكامل لإدارة حضور المصلين مع مزامنة فورية عبر الإنترنت</p>
+        </header>
+
+        <div class="cards">
+            <div class="card">
+                <i class="fas fa-desktop"></i>
+                <h2>لوحة التحكم الإدارية</h2>
+                <p>للمشرفين والإداريين لإدارة النظام بالكامل</p>
+                <a href="admin.html" class="btn">
+                    <i class="fas fa-external-link-alt"></i> فتح لوحة التحكم
+                </a>
+            </div>
+
+            <div class="card">
+                <i class="fas fa-mobile-alt"></i>
+                <h2>تطبيق المسح على الهاتف</h2>
+                <p>للمعاونين لتسجيل الحضور عبر كاميرا الهاتف</p>
+                <a href="phone-scanner.html" class="btn">
+                    <i class="fas fa-external-link-alt"></i> فتح على الهاتف
+                </a>
+            </div>
+        </div>
+
+        <div class="qrcode-section">
+            <h3><i class="fas fa-qrcode"></i> QR Code للهاتف</h3>
+            <p>مسح هذا الكود لفتح تطبيق المسح مباشرة على الهاتف</p>
+            <div id="qrcode"></div>
+            <p style="margin-top: 10px; font-size: 14px;">
+                أو انسخ الرابط:
+                <code id="phone-link" style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px;"></code>
+            </p>
+        </div>
+
+        <div class="instructions">
+            <h3><i class="fas fa-graduation-cap"></i> طريقة الاستخدام</h3>
+
+            <div class="instruction-item">
+                <div class="number">1</div>
+                <div style="flex: 1;">افتح لوحة التحكم على الحاسوب لإنشاء حسابات المصلين</div>
+            </div>
+
+            <div class="instruction-item">
+                <div class="number">2</div>
+                <div style="flex: 1;">ادخل على نفس الرابط من الهاتف أو امسح QR Code</div>
+            </div>
+
+            <div class="instruction-item">
+                <div class="number">3</div>
+                <div style="flex: 1;">ابدأ مسح باركود المصلين لتسجيل الحضور</div>
+            </div>
+
+            <div class="instruction-item">
+                <div class="number">4</div>
+                <div style="flex: 1;">شاهد النتائج تحدث فورياً على جميع الأجهزة</div>
+            </div>
+        </div>
+
+        <footer>
+            <p>جميع البيانات مخزنة على سحابة Firebase وتحدث في الوقت الحقيقي</p>
+            <p>النظام يعمل على جميع الأجهزة بدون حاجة لتثبيت تطبيق</p>
+            <p>© نظام حضور المسجد - النسخة السحابية</p>
+        </footer>
+    </div>
+
+    <!-- Font Awesome Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+    <script>
+        // توليد الرابط للهاتف
+        const currentUrl = window.location.href;
+        const phoneUrl = currentUrl.replace(/index\.html$/, 'phone-scanner.html');
+
+        // عرض الرابط
+        document.getElementById('phone-link').textContent = phoneUrl;
+
+        // توليد QR Code
+        const qrcodeElement = document.getElementById('qrcode');
+        QRCode.toCanvas(qrcodeElement, phoneUrl, {
+            width: 200,
+            margin: 2,
+            color: {
+                dark: '#1a5e1a',
+                light: '#ffffff'
+            }
+        }, function (error) {
+            if (error) {
+                console.error('خطأ في توليد QR Code:', error);
+                qrcodeElement.innerHTML = '<p style="color: red;">خطأ في توليد QR Code</p>';
+            }
+        });
+
+        // نسخ الرابط عند النقر
+        document.getElementById('phone-link').addEventListener('click', function() {
+            navigator.clipboard.writeText(phoneUrl).then(() => {
+                alert('تم نسخ الرابط إلى الحافظة');
+            });
+        });
+    </script>
+</body>
+</html>

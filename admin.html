@@ -1,0 +1,2545 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام حضور المسجد - المزامنة عبر الإنترنت</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        :root {
+            --primary: #1a5e1a;
+            --secondary: #f1c40f;
+            --light: #f8f9fa;
+            --dark: #0d3b0d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --warning: #ffc107;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(to right, var(--dark), var(--primary));
+            color: white;
+            padding: 25px;
+            border-bottom: 5px solid var(--secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+            header h1 {
+                font-size: 28px;
+                margin-bottom: 10px;
+            }
+
+        .auth-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 50px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f0f7f0;
+            border-bottom: 2px solid var(--primary);
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--primary);
+            border-right: 1px solid #ddd;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+
+            .tab:hover {
+                background-color: rgba(26, 94, 26, 0.1);
+            }
+
+            .tab.active {
+                background-color: var(--primary);
+                color: white;
+                border-bottom: 3px solid var(--secondary);
+            }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.5s ease;
+        }
+
+            .tab-content.active {
+                display: block;
+            }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .card {
+            background-color: var(--light);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border-right: 5px solid var(--primary);
+            margin-bottom: 30px;
+        }
+
+            .card h2 {
+                color: var(--primary);
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #eee;
+                font-size: 22px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+        /* قسم الماسح الضوئي */
+        .scanner-section {
+            text-align: center;
+        }
+
+        #scanner-container {
+            width: 100%;
+            height: 300px;
+            margin: 0 auto 20px;
+            border: 3px dashed var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f7f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #scanner-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .prayer-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .prayer-btn {
+            padding: 12px 20px;
+            background-color: #e9f5e9;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            font-weight: bold;
+            color: var(--primary);
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+
+            .prayer-btn.active {
+                background-color: var(--primary);
+                color: white;
+                border-color: var(--secondary);
+            }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary), #2e8b2e);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: #333;
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-info {
+            background-color: var(--info);
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+            color: #333;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* قسم المزامنة */
+        .sync-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--primary);
+        }
+
+        .sync-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sync-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #ccc;
+            animation: pulse 2s infinite;
+        }
+
+            .sync-dot.online {
+                background-color: var(--success);
+            }
+
+            .sync-dot.syncing {
+                background-color: var(--warning);
+            }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .devices-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .device-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border-top: 4px solid var(--primary);
+        }
+
+        .device-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .device-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background-color: var(--light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        /* قسم إنشاء الباركود */
+        .barcode-creation {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .barcode-creation {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                color: var(--primary);
+                font-weight: bold;
+            }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+            .form-control:focus {
+                border-color: var(--primary);
+                outline: none;
+            }
+
+        /* معاينة الباركود */
+        .barcode-preview {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border: 2px dashed var(--primary);
+        }
+
+        #barcode-canvas {
+            max-width: 100%;
+            height: 150px;
+            margin-bottom: 20px;
+        }
+
+        /* قسم التقارير */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border-top: 4px solid var(--primary);
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+
+        .attendance-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .attendance-item {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border-right: 4px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--dark));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* التحميل والتنزيل */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+            .empty-state i {
+                font-size: 60px;
+                color: #ddd;
+                margin-bottom: 20px;
+            }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+            margin-top: 30px;
+        }
+
+        .online-badge {
+            background-color: var(--success);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .offline-badge {
+            background-color: var(--danger);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1><i class="fas fa-mosque"></i> نظام حضور المسجد - المزامنة عبر الإنترنت</h1>
+                <p id="current-date"></p>
+            </div>
+
+            <div class="auth-section" id="auth-section">
+                <!-- سيتم تعبئته بالجافاسكريبت -->
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="scanner">
+                <i class="fas fa-qrcode"></i> مسح الباركود
+            </button>
+            <button class="tab" data-tab="create">
+                <i class="fas fa-plus-circle"></i> إنشاء باركود
+            </button>
+            <button class="tab" data-tab="manage">
+                <i class="fas fa-users"></i> إدارة المصلين
+            </button>
+            <button class="tab" data-tab="reports">
+                <i class="fas fa-chart-bar"></i> التقارير
+            </button>
+            <button class="tab" data-tab="sync">
+                <i class="fas fa-cloud"></i> المزامنة
+            </button>
+        </div>
+
+        <!-- تبويب المسح الضوئي -->
+        <div id="scanner-tab" class="tab-content active">
+            <div class="card scanner-section">
+                <h2><i class="fas fa-camera"></i> مسح باركود المصلين</h2>
+
+                <div class="sync-status">
+                    <div class="sync-indicator">
+                        <div class="sync-dot" id="sync-status-dot"></div>
+                        <span id="sync-status-text">جاري الاتصال...</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span id="last-sync-time">لم تتم المزامنة بعد</span>
+                        <!-- 🆕 أضف هذا الزر -->
+                        <button id="manual-refresh-btn" class="btn btn-sm btn-success" style="padding: 5px 10px;">
+                            <i class="fas fa-redo"></i> تحديث الآن
+                        </button>
+                    </div>
+                </div>
+
+                <div class="prayer-buttons">
+                    <div class="prayer-btn active" data-prayer="الفجر">الفجر</div>
+                    <div class="prayer-btn" data-prayer="الظهر">الظهر</div>
+                    <div class="prayer-btn" data-prayer="العصر">العصر</div>
+                    <div class="prayer-btn" data-prayer="المغرب">المغرب</div>
+                    <div class="prayer-btn" data-prayer="العشاء">العشاء</div>
+                </div>
+
+                <div id="scanner-container">
+                    <div id="scanner-placeholder">
+                        <i class="fas fa-camera" style="font-size: 70px; color: #1a5e1a; opacity: 0.7; margin-bottom: 15px;"></i>
+                        <p>اضغط "بدء المسح" لتفعيل الكاميرا</p>
+                        <p>المسح يعمل على الهاتف والكمبيوتر</p>
+                    </div>
+                    <video id="scanner-video" playsinline style="display: none;"></video>
+                </div>
+
+                <div class="controls">
+                    <button id="start-scanner" class="btn btn-primary">
+                        <i class="fas fa-play"></i> بدء المسح
+                    </button>
+                    <button id="stop-scanner" class="btn btn-secondary" disabled>
+                        <i class="fas fa-stop"></i> إيقاف
+                    </button>
+                    <button id="manual-entry" class="btn btn-success">
+                        <i class="fas fa-keyboard"></i> إدخال يدوي
+                    </button>
+                </div>
+
+                <div id="scanner-result" style="display: none; margin-top: 20px; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold;"></div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-list-check"></i> الحضور اليومي المباشر</h2>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <i class="fas fa-users" style="color: #1a5e1a; font-size: 24px;"></i>
+                        <div class="stat-number" id="total-musalleen">0</div>
+                        <div class="stat-label">إجمالي المصلين</div>
+                    </div>
+                    <div class="stat-box">
+                        <i class="fas fa-user-check" style="color: #28a745; font-size: 24px;"></i>
+                        <div class="stat-number" id="today-attendance">0</div>
+                        <div class="stat-label">حضور اليوم</div>
+                    </div>
+                    <div class="stat-box">
+                        <i class="fas fa-clock" style="color: #17a2b8; font-size: 24px;"></i>
+                        <div class="stat-number" id="current-prayer-count">0</div>
+                        <div class="stat-label" id="current-prayer-label">حضور الفجر</div>
+                    </div>
+                    <div class="stat-box">
+                        <i class="fas fa-percentage" style="color: #ffc107; font-size: 24px;"></i>
+                        <div class="stat-number" id="attendance-rate">0%</div>
+                        <div class="stat-label">نسبة الحضور</div>
+                    </div>
+                </div>
+
+                <div id="attendance-list-container">
+                    <div id="attendance-list" class="attendance-list">
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <p>لم يتم تسجيل أي حضور بعد</p>
+                            <p>ابدأ بمسح باركود المصلين</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- تبويب إنشاء الباركود -->
+        <div id="create-tab" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-barcode"></i> إنشاء باركود جديد لمصلّي</h2>
+
+                <div class="barcode-creation">
+                    <div>
+                        <div class="form-group">
+                            <label for="musallee-name">اسم المصلّي الكامل:</label>
+                            <input type="text" id="musallee-name" class="form-control" placeholder="أدخل اسم المصلّي">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="musallee-phone">رقم الهاتف (اختياري):</label>
+                            <input type="tel" id="musallee-phone" class="form-control" placeholder="05xxxxxxxx">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="barcode-number">رقم الباركود:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="barcode-number" class="form-control" value="M1001" readonly style="flex: 1;">
+                                <button id="generate-barcode" class="btn btn-secondary">
+                                    <i class="fas fa-redo"></i> جديد
+                                </button>
+                            </div>
+                        </div>
+
+                        <button id="create-barcode-btn" class="btn btn-primary" style="width: 100%; padding: 15px; margin-top: 20px;">
+                            <i class="fas fa-barcode"></i> إنشاء الباركود وحفظه في السحابة
+                        </button>
+
+                        <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                            <h4><i class="fas fa-cloud-upload-alt"></i> المزامنة التلقائية</h4>
+                            <p>عند إنشاء باركود جديد، سيتم:</p>
+                            <ol style="margin-right: 20px; margin-top: 10px;">
+                                <li>حفظ البيانات في السحابة (Firebase)</li>
+                                <li>المزامنة مع جميع الأجهزة تلقائياً</li>
+                                <li>إمكانية الوصول من أي جهاز متصل بالإنترنت</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="barcode-preview">
+                        <h3><i class="fas fa-eye"></i> معاينة الباركود</h3>
+                        <div style="background-color: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                            <canvas id="barcode-canvas"></canvas>
+                        </div>
+
+                        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 10px;">
+                            <div id="preview-barcode-number" style="font-family: monospace; font-size: 20px; margin-bottom: 10px;">M1001</div>
+                            <div id="preview-musallee-name" style="color: #666;">اسم المصلّي</div>
+
+                            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button id="download-barcode" class="btn btn-success" style="flex: 1;">
+                                    <i class="fas fa-download"></i> تحميل الصورة
+                                </button>
+                                <button id="share-link" class="btn btn-info" style="flex: 1;">
+                                    <i class="fas fa-share"></i> رابط المشاركة
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- تبويب إدارة المصلين -->
+        <div id="manage-tab" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-user-cog"></i> إدارة المصلين في السحابة</h2>
+
+                <div class="sync-status">
+                    <div class="sync-indicator">
+                        <div class="sync-dot online"></div>
+                        <span>متصل بقاعدة البيانات السحابية</span>
+                    </div>
+                    <button id="refresh-data" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-sync"></i> تحديث البيانات
+                    </button>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" id="search-musalleen" class="form-control" placeholder="ابحث عن مصلّي..." style="flex: 1; min-width: 300px;">
+                    <button id="export-cloud-data" class="btn btn-success">
+                        <i class="fas fa-cloud-download-alt"></i> تصدير من السحابة
+                    </button>
+                    <button id="import-cloud-data" class="btn btn-info">
+                        <i class="fas fa-cloud-upload-alt"></i> استيراد للسحابة
+                    </button>
+                </div>
+
+                <div id="musalleen-list-container">
+                    <div id="musalleen-list" class="devices-list">
+                        <!-- سيتم تعبئته بالجافاسكريبت -->
+                    </div>
+                </div>
+
+                <div id="no-musalleen" class="empty-state">
+                    <i class="fas fa-users-slash"></i>
+                    <p>لا يوجد مصلّين مسجلين في السحابة</p>
+                    <p>انتقل إلى تبويب "إنشاء باركود" لإضافة مصلّين</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- تبويب التقارير -->
+        <div id="reports-tab" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-chart-pie"></i> تقارير الحضور من السحابة</h2>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <select id="report-period" class="form-control" style="flex: 1; min-width: 200px;">
+                        <option value="today">اليوم</option>
+                        <option value="yesterday">أمس</option>
+                        <option value="week">هذا الأسبوع</option>
+                        <option value="month">هذا الشهر</option>
+                        <option value="custom">فترة مخصصة</option>
+                    </select>
+                    <input type="date" id="report-from" class="form-control" style="display: none;">
+                    <input type="date" id="report-to" class="form-control" style="display: none;">
+                    <button id="generate-report" class="btn btn-primary">
+                        <i class="fas fa-chart-line"></i> إنشاء التقرير
+                    </button>
+                    <button id="download-report" class="btn btn-success">
+                        <i class="fas fa-file-excel"></i> تنزيل Excel
+                    </button>
+                </div>
+
+                <div class="stats-grid" id="report-stats">
+                    <!-- سيتم تعبئته بالجافاسكريبت -->
+                </div>
+
+                <div style="overflow-x: auto; margin-top: 20px;">
+                    <table class="table" id="report-table" style="width: 100%; border-collapse: collapse; display: none;">
+                        <thead id="report-table-header">
+                            <!-- سيتم تعبئته بالجافاسكريبت -->
+                        </thead>
+                        <tbody id="report-table-body">
+                            <!-- سيتم تعبئته بالجافاسكريبت -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="no-report" class="empty-state">
+                    <i class="fas fa-chart-bar"></i>
+                    <p>اختر فترة واكبس "إنشاء التقرير"</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- تبويب المزامنة -->
+        <div id="sync-tab" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-sync-alt"></i> إدارة المزامنة عبر الإنترنت</h2>
+
+                <div class="sync-status">
+                    <div class="sync-indicator">
+                        <div class="sync-dot" id="cloud-status-dot"></div>
+                        <span id="cloud-status-text">جاري التحقق من اتصال السحابة...</span>
+                    </div>
+                    <div>
+                        <span id="connected-devices">0 جهاز متصل</span>
+                    </div>
+                </div>
+
+                <div class="devices-list">
+                    <div class="device-card">
+                        <div class="device-header">
+                            <div class="device-icon">
+                                <i class="fas fa-desktop"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0;">جهاز الكمبيوتر</h4>
+                                <p style="color: #666; margin: 5px 0;" id="computer-status">جاري التحقق...</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p><i class="fas fa-database"></i> البيانات المحلية: <span id="local-data-count">0</span> سجل</p>
+                            <p><i class="fas fa-cloud"></i> البيانات السحابية: <span id="cloud-data-count">0</span> سجل</p>
+                            <button id="sync-to-cloud" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                                <i class="fas fa-cloud-upload-alt"></i> مزامنة مع السحابة
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="device-card">
+                        <div class="device-header">
+                            <div class="device-icon">
+                                <i class="fas fa-mobile-alt"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0;">الهاتف المحمول</h4>
+                                <p style="color: #666; margin: 5px 0;" id="phone-status">غير متصل</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p><i class="fas fa-link"></i> رابط الوصول من الهاتف:</p>
+                            <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                <code id="phone-link">جاري التوليد...</code>
+                            </div>
+                            <button id="copy-phone-link" class="btn btn-secondary" style="width: 100%;">
+                                <i class="fas fa-copy"></i> نسخ الرابط
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="device-card">
+                        <div class="device-header">
+                            <div class="device-icon">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0;">QR Code للوصول السريع</h4>
+                                <p style="color: #666; margin: 5px 0;">افتح النظام على الهاتف</p>
+                            </div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div id="qrcode-container" style="width: 150px; height: 150px; margin: 0 auto; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px;">
+                                <i class="fas fa-qrcode" style="font-size: 60px; color: #ccc;"></i>
+                            </div>
+                            <button id="generate-qrcode" class="btn btn-success" style="width: 100%; margin-top: 15px;">
+                                <i class="fas fa-barcode"></i> توليد QR Code
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 30px;">
+                    <h3><i class="fas fa-history"></i> سجل المزامنة</h3>
+                    <div id="sync-history" style="max-height: 300px; overflow-y: auto;">
+                        <div class="empty-state" style="padding: 20px;">
+                            <i class="fas fa-history"></i>
+                            <p>لا توجد عمليات مزامنة سابقة</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>نظام إدارة حضور المسجد - النسخة السحابية</p>
+            <p>جميع البيانات مخزنة على سحابة Firebase ويمكن الوصول إليها من أي جهاز</p>
+            <p id="firebase-info">جاري الاتصال بخدمة السحابة...</p>
+        </footer>
+    </div>
+
+    <!-- نماذج منبثقة -->
+    <div id="manual-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="color: #1a5e1a;">إدخال باركود يدويًا</h2>
+                <button onclick="closeModal('manual-modal')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+            </div>
+            <input type="text" id="manual-barcode-input" class="form-control" placeholder="أدخل رقم الباركود" style="margin-bottom: 20px;">
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="submit-manual" class="btn btn-primary">تسجيل الحضور</button>
+                <button onclick="closeModal('manual-modal')" class="btn btn-danger">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="color: #1a5e1a;">تسجيل الدخول للنظام السحابي</h2>
+                <button onclick="closeModal('login-modal')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>البريد الإلكتروني:</label>
+                <input type="email" id="login-email" class="form-control" placeholder="email@example.com">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور:</label>
+                <input type="password" id="login-password" class="form-control" placeholder="********">
+            </div>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+                <button id="do-login" class="btn btn-primary">تسجيل الدخول</button>
+                <button id="do-register" class="btn btn-success">إنشاء حساب جديد</button>
+                <button onclick="closeModal('login-modal')" class="btn btn-danger">إلغاء</button>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <p>أو <a href="#" id="guest-login" style="color: var(--primary);">الدخول كزائر</a></p>
+                <p style="font-size: 12px; color: #666;">الزائر يمكنه استخدام النظام محلياً فقط</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- مكتبات JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+    <script>
+        // ============================================
+        // نظام حضور المسجد مع المزامنة عبر الإنترنت
+        // ============================================
+
+        // إعدادات Firebase - يجب استبدالها بإعدادات مشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-8QqPzCSosbe4D2sBaapLiLyiBF7qQK4",
+            authDomain: "mosque-attendance-fc985.firebaseapp.com",
+            projectId: "mosque-attendance-fc985",
+            storageBucket: "mosque-attendance-fc985.firebasestorage.app",
+            messagingSenderId: "326249455922",
+            appId: "1:326249455922:web:2863739c6a26a347ccf72b",
+            measurementId: "G-REMJK883NY"
+        };
+
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+
+        // بيانات النظام
+        let systemData = {
+            musalleen: [],
+            attendance: [],
+            settings: {
+                currentPrayer: 'الفجر',
+                mosqueId: null,
+                lastSync: null
+            }
+        };
+
+        // حالة النظام
+        let scannerActive = false;
+        let videoStream = null;
+        let currentUser = null;
+        let mosqueId = null;
+        let realtimeListeners = [];
+
+        // عناصر DOM
+        const elements = {
+            // المصادقة
+            authSection: document.getElementById('auth-section'),
+            currentDate: document.getElementById('current-date'),
+            loginModal: document.getElementById('login-modal'),
+
+            // المسح الضوئي
+            scannerVideo: document.getElementById('scanner-video'),
+            startScannerBtn: document.getElementById('start-scanner'),
+            stopScannerBtn: document.getElementById('stop-scanner'),
+            manualEntryBtn: document.getElementById('manual-entry'),
+            prayerButtons: document.querySelectorAll('.prayer-btn'),
+            scannerResult: document.getElementById('scanner-result'),
+            attendanceList: document.getElementById('attendance-list'),
+
+            // الإحصائيات
+            totalMusalleen: document.getElementById('total-musalleen'),
+            todayAttendance: document.getElementById('today-attendance'),
+            currentPrayerCount: document.getElementById('current-prayer-count'),
+            currentPrayerLabel: document.getElementById('current-prayer-label'),
+            attendanceRate: document.getElementById('attendance-rate'),
+
+            // حالة المزامنة
+            syncStatusDot: document.getElementById('sync-status-dot'),
+            syncStatusText: document.getElementById('sync-status-text'),
+            lastSyncTime: document.getElementById('last-sync-time'),
+            cloudStatusDot: document.getElementById('cloud-status-dot'),
+            cloudStatusText: document.getElementById('cloud-status-text'),
+            connectedDevices: document.getElementById('connected-devices'),
+
+            // إنشاء الباركود
+            musalleeName: document.getElementById('musallee-name'),
+            musalleePhone: document.getElementById('musallee-phone'),
+            barcodeNumber: document.getElementById('barcode-number'),
+            generateBarcodeBtn: document.getElementById('generate-barcode'),
+            createBarcodeBtn: document.getElementById('create-barcode-btn'),
+            barcodeCanvas: document.getElementById('barcode-canvas'),
+            previewBarcodeNumber: document.getElementById('preview-barcode-number'),
+            previewMusalleeName: document.getElementById('preview-musallee-name'),
+            downloadBarcodeBtn: document.getElementById('download-barcode'),
+            shareLinkBtn: document.getElementById('share-link'),
+
+            // إدارة المصلين
+            searchMusalleen: document.getElementById('search-musalleen'),
+            musalleenList: document.getElementById('musalleen-list'),
+            noMusalleen: document.getElementById('no-musalleen'),
+            refreshDataBtn: document.getElementById('refresh-data'),
+            exportCloudDataBtn: document.getElementById('export-cloud-data'),
+            importCloudDataBtn: document.getElementById('import-cloud-data'),
+
+            // التقارير
+            reportPeriod: document.getElementById('report-period'),
+            reportFrom: document.getElementById('report-from'),
+            reportTo: document.getElementById('report-to'),
+            generateReportBtn: document.getElementById('generate-report'),
+            downloadReportBtn: document.getElementById('download-report'),
+            reportStats: document.getElementById('report-stats'),
+            reportTable: document.getElementById('report-table'),
+            reportTableHeader: document.getElementById('report-table-header'),
+            reportTableBody: document.getElementById('report-table-body'),
+            noReport: document.getElementById('no-report'),
+
+            // المزامنة
+            computerStatus: document.getElementById('computer-status'),
+            localDataCount: document.getElementById('local-data-count'),
+            cloudDataCount: document.getElementById('cloud-data-count'),
+            syncToCloudBtn: document.getElementById('sync-to-cloud'),
+            phoneStatus: document.getElementById('phone-status'),
+            phoneLink: document.getElementById('phone-link'),
+            copyPhoneLinkBtn: document.getElementById('copy-phone-link'),
+            qrcodeContainer: document.getElementById('qrcode-container'),
+            generateQrcodeBtn: document.getElementById('generate-qrcode'),
+            syncHistory: document.getElementById('sync-history'),
+
+            // معلومات Firebase
+            firebaseInfo: document.getElementById('firebase-info'),
+
+            // النماذج المنبثقة
+            manualModal: document.getElementById('manual-modal'),
+            manualBarcodeInput: document.getElementById('manual-barcode-input'),
+            submitManualBtn: document.getElementById('submit-manual'),
+            loginEmail: document.getElementById('login-email'),
+            loginPassword: document.getElementById('login-password'),
+            doLoginBtn: document.getElementById('do-login'),
+            doRegisterBtn: document.getElementById('do-register'),
+            guestLoginBtn: document.getElementById('guest-login'),
+
+            // الزر الجديد
+            manualRefreshBtn: document.getElementById('manual-refresh-btn')
+        };
+
+        // ============================================
+        // تهيئة النظام
+        // ============================================
+
+        async function initSystem() {
+            console.log('🚀 جاري تهيئة نظام المسجد السحابي...');
+
+            // إعداد التواريخ
+            setupDates();
+
+            // إعداد معالجات الأحداث
+            setupEventListeners();
+
+            // التحقق من حالة المصادقة
+            setupAuth();
+
+            // تحديث الواجهة
+            updateDashboard();
+
+            console.log('✅ تم تهيئة النظام بنجاح!');
+        }
+
+        function setupDates() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            elements.currentDate.textContent = now.toLocaleDateString('ar-EG', options);
+
+            // تعيين التواريخ الافتراضية
+            const today = now.toISOString().split('T')[0];
+            elements.reportFrom.value = today;
+            elements.reportTo.value = today;
+        }
+
+        function setupEventListeners() {
+            // التبويبات
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    switchTab(tabId);
+                });
+            });
+
+            // أزرار الصلاة
+            elements.prayerButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    elements.prayerButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    systemData.settings.currentPrayer = btn.dataset.prayer;
+                    elements.currentPrayerLabel.textContent = `حضور ${btn.dataset.prayer}`;
+                    updateCurrentPrayerCount();
+                    saveLocalData();
+                });
+            });
+
+            // المسح الضوئي
+            elements.startScannerBtn.addEventListener('click', startScanner);
+            elements.stopScannerBtn.addEventListener('click', stopScanner);
+            elements.manualEntryBtn.addEventListener('click', openManualEntry);
+            elements.submitManualBtn.addEventListener('click', submitManualEntry);
+
+            // إنشاء الباركود
+            elements.generateBarcodeBtn.addEventListener('click', generateNewBarcodeNumber);
+            elements.createBarcodeBtn.addEventListener('click', createBarcodeInCloud);
+            elements.downloadBarcodeBtn.addEventListener('click', downloadBarcode);
+            elements.shareLinkBtn.addEventListener('click', generateShareLink);
+
+            // إدارة المصلين
+            elements.searchMusalleen.addEventListener('input', searchMusalleen);
+            elements.refreshDataBtn.addEventListener('click', refreshCloudData);
+            elements.exportCloudDataBtn.addEventListener('click', exportCloudData);
+            elements.importCloudDataBtn.addEventListener('click', importCloudData);
+
+            // التقارير
+            elements.reportPeriod.addEventListener('change', handleReportTypeChange);
+            elements.generateReportBtn.addEventListener('click', generateReportFromCloud);
+            elements.downloadReportBtn.addEventListener('click', downloadReport);
+
+            // المزامنة
+            elements.syncToCloudBtn.addEventListener('click', syncLocalToCloud);
+            elements.copyPhoneLinkBtn.addEventListener('click', copyPhoneLink);
+            elements.generateQrcodeBtn.addEventListener('click', generateQRCode);
+
+            // المصادقة
+            elements.doLoginBtn.addEventListener('click', loginUser);
+            elements.doRegisterBtn.addEventListener('click', registerUser);
+            elements.guestLoginBtn.addEventListener('click', loginAsGuest);
+
+            // تحديث يدوي
+            elements.manualRefreshBtn.addEventListener('click', async () => {
+                console.log('🔄 تحديث يدوي');
+                await loadCloudData();
+                showMessage('تم تحديث البيانات يدوياً', 'success');
+                updateLastSyncTime();
+            });
+
+            // تحديث تلقائي للوحة التحكم
+            setInterval(updateDashboard, 30000);
+        }
+
+        // ============================================
+        // نظام المصادقة والمستخدمين
+        // ============================================
+
+        function setupAuth() {
+            // مراقبة حالة المصادقة
+            auth.onAuthStateChanged(async (user) => {
+                currentUser = user;
+
+                if (user) {
+                    // مستخدم مسجل الدخول
+                    console.log('✅ المستخدم مسجل:', user.email);
+
+                    // إنشاء أو جلب معرف المسجد
+                    await setupMosqueId(user.uid);
+
+                    // تحميل البيانات من السحابة
+                    await loadCloudData();
+
+                    // 🚀 بدء المزامنة الفورية
+                    startRealtimeSync();
+
+                    // تحديث واجهة المستخدم
+                    updateAuthUI();
+                    updateSyncStatus(true, 'متصل بالسحابة');
+
+                } else {
+                    // لا يوجد مستخدم مسجل
+                    console.log('❌ لا يوجد مستخدم مسجل');
+                    showLoginModal();
+                    updateAuthUI();
+                    updateSyncStatus(false, 'غير متصل بالسحابة');
+                }
+            });
+        }
+
+        async function setupMosqueId(userId) {
+            // التحقق مما إذا كان للمستخدم مسجد مسجل
+            const mosqueRef = db.collection('mosques').where('adminId', '==', userId);
+            const snapshot = await mosqueRef.get();
+
+            if (snapshot.empty) {
+                // إنشاء مسجد جديد
+                mosqueId = generateMosqueId();
+                await db.collection('mosques').doc(mosqueId).set({
+                    name: 'مسجد جديد',
+                    adminId: userId,
+                    adminEmail: currentUser.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    musalleenCount: 0,
+                    attendanceCount: 0,
+                    lastSync: new Date().toISOString()
+                });
+
+                // إنشاء المجموعات الفرعية
+                await db.collection('mosques').doc(mosqueId).collection('settings').doc('general').set({
+                    currentPrayer: 'الفجر',
+                    lastSync: new Date().toISOString()
+                });
+
+            } else {
+                // استخدام المسجد الموجود
+                snapshot.forEach(doc => {
+                    mosqueId = doc.id;
+                });
+            }
+
+            systemData.settings.mosqueId = mosqueId;
+            console.log('🕌 معرف المسجد:', mosqueId);
+
+            // حفظ معرف المسجد في localStorage للوصول السريع
+            localStorage.setItem('current_mosque_id', mosqueId);
+        }
+
+        function generateMosqueId() {
+            return 'MOSQUE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        }
+
+        function updateAuthUI() {
+            const authSection = elements.authSection;
+
+            if (currentUser) {
+                authSection.innerHTML = `
+                            <div class="user-info">
+                                <div class="user-avatar">${currentUser.email.charAt(0).toUpperCase()}</div>
+                                <div>
+                                    <div style="font-weight: bold;">${currentUser.email}</div>
+                                    <div style="font-size: 12px;">${mosqueId ? 'مسجد: ' + mosqueId.substring(0, 8) + '...' : 'جاري التحميل...'}</div>
+                                </div>
+                            </div>
+                            <button id="logout-btn" class="btn btn-danger btn-sm">
+                                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                            </button>
+                        `;
+
+                document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+            } else {
+                authSection.innerHTML = `
+                            <button id="login-btn" class="btn btn-primary">
+                                <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                            </button>
+                        `;
+
+                document.getElementById('login-btn').addEventListener('click', showLoginModal);
+            }
+        }
+
+        function showLoginModal() {
+            elements.loginModal.style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        async function loginUser() {
+            const email = elements.loginEmail.value;
+            const password = elements.loginPassword.value;
+
+            if (!email || !password) {
+                showMessage('الرجاء إدخال البريد الإلكتروني وكلمة المرور', 'error');
+                return;
+            }
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                closeModal('login-modal');
+                showMessage('تم تسجيل الدخول بنجاح', 'success');
+            } catch (error) {
+                console.error('خطأ في تسجيل الدخول:', error);
+                showMessage('خطأ في تسجيل الدخول: ' + error.message, 'error');
+            }
+        }
+
+        async function registerUser() {
+            const email = elements.loginEmail.value;
+            const password = elements.loginPassword.value;
+
+            if (!email || !password) {
+                showMessage('الرجاء إدخال البريد الإلكتروني وكلمة المرور', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+                return;
+            }
+
+            try {
+                await auth.createUserWithEmailAndPassword(email, password);
+                closeModal('login-modal');
+                showMessage('تم إنشاء الحساب بنجاح', 'success');
+            } catch (error) {
+                console.error('خطأ في إنشاء الحساب:', error);
+                showMessage('خطأ في إنشاء الحساب: ' + error.message, 'error');
+            }
+        }
+
+        function loginAsGuest() {
+            // استخدام بيانات محلية بدون تسجيل دخول
+            mosqueId = 'GUEST_' + Date.now();
+            systemData.settings.mosqueId = mosqueId;
+
+            // تحميل البيانات المحلية
+            loadLocalData();
+
+            closeModal('login-modal');
+            updateAuthUI();
+            updateSyncStatus(false, 'وضع الزائر - البيانات محلية فقط');
+
+            showMessage('تم الدخول كزائر، البيانات مخزنة محلياً فقط', 'info');
+        }
+
+        async function logoutUser() {
+            try {
+                // إيقاف جميع المستمعين في الوقت الحقيقي
+                stopRealtimeListeners();
+
+                await auth.signOut();
+                showMessage('تم تسجيل الخروج', 'success');
+            } catch (error) {
+                console.error('خطأ في تسجيل الخروج:', error);
+            }
+        }
+
+        // ============================================
+        // المزامنة الفورية - الإضافة الجديدة
+        // ============================================
+
+        // دالة لبدء الاستماع للتحديثات الفورية
+        function startRealtimeSync() {
+            if (!mosqueId || !currentUser) {
+                console.log('❌ لا يمكن بدء المزامنة: لا يوجد مسجد أو مستخدم');
+                return;
+            }
+
+            console.log('🚀 بدء المزامنة الفورية لـ admin.html');
+
+            // الاستماع لتحديثات الحضور في الوقت الحقيقي
+            const attendanceRef = db.collection('mosques').doc(mosqueId).collection('attendance');
+
+            // إضافة listener للتحديثات
+            const unsubscribe = attendanceRef
+                .orderBy('timestamp', 'desc')
+                .limit(100)
+                .onSnapshot((snapshot) => {
+                    console.log('📡 تم استلام تحديث جديد من السحابة');
+
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            console.log('➕ سجل جديد:', change.doc.data().name);
+                            handleNewAttendance(change.doc.data());
+                        }
+                    });
+
+                    // تحديث جميع البيانات بعد التغيير
+                    loadCloudData();
+
+                    // تحديث حالة المزامنة
+                    updateSyncStatus(true, 'مزامن مع السحابة');
+                    updateLastSyncTime();
+                }, (error) => {
+                    console.error('❌ خطأ في المزامنة الفورية:', error);
+                    updateSyncStatus(false, 'خطأ في المزامنة');
+                });
+
+            // حفظ المرجع للإيقاف لاحقاً
+            realtimeListeners.push(unsubscribe);
+        }
+
+        // معالجة سجل حضور جديد
+        function handleNewAttendance(attendanceRecord) {
+            // إضافة إلى البيانات المحلية إذا لم تكن موجودة
+            const exists = systemData.attendance.some(record => record.id === attendanceRecord.id);
+
+            if (!exists) {
+                systemData.attendance.unshift(attendanceRecord);
+
+                // تحديث الواجهة فوراً
+                updateDashboard();
+                updateAttendanceList();
+
+                // إظهار إشعار
+                showNotification(`📅 ${attendanceRecord.name} - ${attendanceRecord.prayer}`);
+            }
+        }
+
+        // إظهار إشعار عند تحديث البيانات
+        function showNotification(message) {
+            // إنشاء عنصر الإشعار
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(to right, #28a745, #20c997);
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    z-index: 9999;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                    animation: slideIn 0.5s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-weight: bold;
+                `;
+
+            notification.innerHTML = `
+                    <i class="fas fa-sync-alt fa-spin"></i>
+                    <span>${message}</span>
+                `;
+
+            document.body.appendChild(notification);
+
+            // إخفاء الإشعار بعد 3 ثواني
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.5s ease';
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        }
+
+        // تحديث وقت المزامنة الأخير
+        function updateLastSyncTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ar-EG', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            elements.lastSyncTime.textContent = `آخر تحديث: ${timeStr}`;
+        }
+
+        // ============================================
+        // إدارة البيانات المحلية
+        // ============================================
+
+        function loadLocalData() {
+            const savedData = localStorage.getItem(`mosque_local_${mosqueId}`);
+            if (savedData) {
+                try {
+                    systemData = JSON.parse(savedData);
+                    console.log('✅ تم تحميل البيانات المحلية');
+                } catch (error) {
+                    console.error('❌ خطأ في تحميل البيانات المحلية:', error);
+                }
+            }
+
+            updateLocalDataCount();
+        }
+
+        function saveLocalData() {
+            try {
+                localStorage.setItem(`mosque_local_${mosqueId}`, JSON.stringify(systemData));
+                console.log('✅ تم حفظ البيانات المحلية');
+            } catch (error) {
+                console.error('❌ خطأ في حفظ البيانات المحلية:', error);
+            }
+        }
+
+        function updateLocalDataCount() {
+            const musalleenCount = systemData.musalleen.length;
+            const attendanceCount = systemData.attendance.length;
+
+            elements.localDataCount.textContent = `${musalleenCount} مصلّي، ${attendanceCount} حضور`;
+        }
+
+        // ============================================
+        // المزامنة مع السحابة
+        // ============================================
+
+        async function loadCloudData() {
+            if (!mosqueId) return;
+
+            try {
+                // تحميل المصلين
+                const musalleenSnapshot = await db.collection('mosques').doc(mosqueId)
+                    .collection('musalleen').get();
+
+                systemData.musalleen = [];
+                musalleenSnapshot.forEach(doc => {
+                    systemData.musalleen.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                // تحميل الحضور (آخر 1000 سجل)
+                const attendanceSnapshot = await db.collection('mosques').doc(mosqueId)
+                    .collection('attendance')
+                    .orderBy('timestamp', 'desc')
+                    .limit(1000)
+                    .get();
+
+                systemData.attendance = [];
+                attendanceSnapshot.forEach(doc => {
+                    systemData.attendance.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                // تحديث الإحصائيات
+                updateDashboard();
+                updateCloudDataCount();
+                updateAttendanceList();
+
+                console.log('✅ تم تحميل البيانات من السحابة');
+
+            } catch (error) {
+                console.error('❌ خطأ في تحميل البيانات من السحابة:', error);
+                showMessage('خطأ في تحميل البيانات من السحابة', 'error');
+            }
+        }
+
+        function setupRealtimeListeners() {
+            if (!mosqueId) return;
+
+            // إيقاف المستمعين السابقين
+            stopRealtimeListeners();
+
+            // الاستماع للتغييرات في المصلين
+            const musalleenListener = db.collection('mosques').doc(mosqueId)
+                .collection('musalleen')
+                .onSnapshot((snapshot) => {
+                    systemData.musalleen = [];
+                    snapshot.forEach(doc => {
+                        systemData.musalleen.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+
+                    updateDashboard();
+                    updateCloudDataCount();
+                    console.log('✅ تم تحديث بيانات المصلين في الوقت الحقيقي');
+                });
+
+            // الاستماع للتغييرات في الحضور
+            const attendanceListener = db.collection('mosques').doc(mosqueId)
+                .collection('attendance')
+                .orderBy('timestamp', 'desc')
+                .limit(100)
+                .onSnapshot((snapshot) => {
+                    systemData.attendance = [];
+                    snapshot.forEach(doc => {
+                        systemData.attendance.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+
+                    updateDashboard();
+                    updateCloudDataCount();
+                    updateAttendanceList();
+                    console.log('✅ تم تحديث بيانات الحضور في الوقت الحقيقي');
+                });
+
+            realtimeListeners.push(musalleenListener, attendanceListener);
+        }
+
+        function stopRealtimeListeners() {
+            realtimeListeners.forEach(unsubscribe => {
+                if (typeof unsubscribe === 'function') {
+                    unsubscribe();
+                }
+            });
+            realtimeListeners = [];
+        }
+
+        async function syncLocalToCloud() {
+            if (!currentUser) {
+                showMessage('الرجاء تسجيل الدخول للمزامنة مع السحابة', 'error');
+                return;
+            }
+
+            try {
+                showMessage('جاري المزامنة مع السحابة...', 'info');
+
+                // مزامنة المصلين
+                for (const musallee of systemData.musalleen) {
+                    await db.collection('mosques').doc(mosqueId)
+                        .collection('musalleen')
+                        .doc(musallee.id)
+                        .set(musallee, { merge: true });
+                }
+
+                // مزامنة الحضور
+                for (const record of systemData.attendance) {
+                    await db.collection('mosques').doc(mosqueId)
+                        .collection('attendance')
+                        .doc(record.id)
+                        .set(record, { merge: true });
+                }
+
+                // تحديث وقت المزامنة الأخير
+                await db.collection('mosques').doc(mosqueId)
+                    .collection('settings')
+                    .doc('general')
+                    .update({
+                        lastSync: new Date().toISOString()
+                    });
+
+                // تسجيل عملية المزامنة
+                await db.collection('mosques').doc(mosqueId)
+                    .collection('syncHistory')
+                    .add({
+                        type: 'manual',
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        user: currentUser.email,
+                        musalleenCount: systemData.musalleen.length,
+                        attendanceCount: systemData.attendance.length
+                    });
+
+                updateSyncStatus(true, 'تمت المزامنة بنجاح');
+                showMessage('✅ تمت مزامنة البيانات مع السحابة بنجاح', 'success');
+
+            } catch (error) {
+                console.error('❌ خطأ في المزامنة:', error);
+                updateSyncStatus(false, 'خطأ في المزامنة');
+                showMessage('خطأ في المزامنة: ' + error.message, 'error');
+            }
+        }
+
+        function updateSyncStatus(connected, message) {
+            const dot = elements.syncStatusDot;
+            const text = elements.syncStatusText;
+
+            if (connected) {
+                dot.className = 'sync-dot online';
+                dot.style.backgroundColor = 'var(--success)';
+                text.textContent = message;
+                updateLastSyncTime();
+            } else {
+                dot.className = 'sync-dot';
+                dot.style.backgroundColor = 'var(--danger)';
+                text.textContent = message;
+            }
+
+            // تحديث حالة السحابة
+            elements.cloudStatusDot.className = connected ? 'sync-dot online' : 'sync-dot';
+            elements.cloudStatusText.textContent = connected ? 'متصل بالسحابة' : 'غير متصل';
+        }
+
+        function updateCloudDataCount() {
+            const musalleenCount = systemData.musalleen.length;
+            const attendanceCount = systemData.attendance.length;
+
+            elements.cloudDataCount.textContent = `${musalleenCount} مصلّي، ${attendanceCount} حضور`;
+        }
+
+        // ============================================
+        // المسح الضوئي وتسجيل الحضور
+        // ============================================
+
+        async function startScanner() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+
+                elements.scannerVideo.srcObject = videoStream;
+                elements.scannerVideo.style.display = 'block';
+                elements.scannerVideo.play();
+
+                document.getElementById('scanner-placeholder').style.display = 'none';
+
+                elements.startScannerBtn.disabled = true;
+                elements.stopScannerBtn.disabled = false;
+                scannerActive = true;
+
+                scanBarcode();
+
+            } catch (error) {
+                showMessage('خطأ في الوصول إلى الكاميرا. تأكد من السماح للموقع باستخدام الكاميرا.', 'error');
+            }
+        }
+
+        function stopScanner() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+
+            elements.scannerVideo.style.display = 'none';
+            document.getElementById('scanner-placeholder').style.display = 'block';
+
+            elements.startScannerBtn.disabled = false;
+            elements.stopScannerBtn.disabled = true;
+            scannerActive = false;
+        }
+
+        function scanBarcode() {
+            if (!scannerActive) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            if (elements.scannerVideo.readyState === elements.scannerVideo.HAVE_ENOUGH_DATA) {
+                canvas.width = elements.scannerVideo.videoWidth;
+                canvas.height = elements.scannerVideo.videoHeight;
+
+                ctx.drawImage(elements.scannerVideo, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    processScannedBarcode(code.data);
+                }
+            }
+
+            if (scannerActive) {
+                requestAnimationFrame(scanBarcode);
+            }
+        }
+
+        async function processScannedBarcode(barcodeText) {
+            // البحث عن المصلّي
+            const musallee = systemData.musalleen.find(m => m.barcode === barcodeText);
+
+            if (musallee) {
+                // التحقق من عدم تكرار التسجيل
+                const today = new Date().toISOString().split('T')[0];
+                const prayer = systemData.settings.currentPrayer;
+
+                const alreadyRegistered = systemData.attendance.some(record =>
+                    record.musalleeId === musallee.id &&
+                    record.prayer === prayer &&
+                    record.date === today
+                );
+
+                if (alreadyRegistered) {
+                    showMessage(`${musallee.name} مسجل بالفعل لصلاة ${prayer}`, 'warning');
+                    return;
+                }
+
+                // تسجيل الحضور
+                await registerAttendance(musallee);
+
+            } else {
+                showMessage('باركود غير مسجل في النظام', 'error');
+            }
+        }
+
+        async function registerAttendance(musallee) {
+            const now = new Date();
+            const attendanceRecord = {
+                id: Date.now().toString(),
+                musalleeId: musallee.id,
+                barcode: musallee.barcode,
+                name: musallee.name,
+                phone: musallee.phone || 'غير مسجل',
+                prayer: systemData.settings.currentPrayer,
+                date: now.toISOString().split('T')[0],
+                time: now.toLocaleTimeString('ar-EG', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }),
+                timestamp: now.getTime(),
+                device: 'web',
+                synced: false
+            };
+
+            // إضافة محلياً
+            systemData.attendance.unshift(attendanceRecord);
+            saveLocalData();
+
+            // إضافة إلى السحابة إذا كان متصلاً
+            if (currentUser && mosqueId) {
+                try {
+                    await db.collection('mosques').doc(mosqueId)
+                        .collection('attendance')
+                        .doc(attendanceRecord.id)
+                        .set({
+                            ...attendanceRecord,
+                            synced: true,
+                            syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                    attendanceRecord.synced = true;
+
+                } catch (error) {
+                    console.error('❌ خطأ في حفظ الحضور في السحابة:', error);
+                }
+            }
+
+            // تحديث الواجهة
+            addAttendanceToUI(attendanceRecord);
+            updateDashboard();
+
+            // إظهار رسالة النجاح
+            showMessage(`✅ تم تسجيل حضور ${musallee.name} لصلاة ${systemData.settings.currentPrayer}`, 'success');
+
+            // إيقاف المسح مؤقتاً
+            if (scannerActive) {
+                scannerActive = false;
+                setTimeout(() => {
+                    if (videoStream) {
+                        scannerActive = true;
+                        scanBarcode();
+                    }
+                }, 2000);
+            }
+        }
+
+        // ============================================
+        // إنشاء الباركود وحفظه في السحابة
+        // ============================================
+
+        function generateNewBarcodeNumber() {
+            // البحث عن أعلى رقم باركود
+            let maxNumber = 1000;
+            systemData.musalleen.forEach(musallee => {
+                if (musallee.barcode && musallee.barcode.startsWith('M')) {
+                    const num = parseInt(musallee.barcode.substring(1));
+                    if (num > maxNumber) maxNumber = num;
+                }
+            });
+
+            const newNumber = `M${maxNumber + 1}`;
+            elements.barcodeNumber.value = newNumber;
+            generateBarcodePreview(newNumber, elements.musalleeName.value || 'اسم المصلّي');
+            return newNumber;
+        }
+
+        function generateBarcodePreview(barcodeNumber, name) {
+            elements.previewBarcodeNumber.textContent = barcodeNumber;
+            elements.previewMusalleeName.textContent = name;
+
+            const canvas = elements.barcodeCanvas;
+            canvas.width = 400;
+            canvas.height = 150;
+
+            try {
+                JsBarcode(canvas, barcodeNumber, {
+                    format: 'CODE128',
+                    width: 2,
+                    height: 60,
+                    displayValue: true,
+                    fontSize: 20,
+                    background: "#ffffff",
+                    lineColor: "#000000",
+                    margin: 10
+                });
+            } catch (error) {
+                console.error('❌ خطأ في توليد الباركود:', error);
+            }
+        }
+
+        async function createBarcodeInCloud() {
+            const name = elements.musalleeName.value.trim();
+            const phone = elements.musalleePhone.value.trim();
+            const barcodeNumber = elements.barcodeNumber.value.trim();
+
+            if (!name) {
+                showMessage('الرجاء إدخال اسم المصلّي', 'error');
+                return;
+            }
+
+            if (!barcodeNumber) {
+                showMessage('الرجاء إدخال رقم الباركود', 'error');
+                return;
+            }
+
+            // التحقق من عدم تكرار الباركود
+            const existingMusallee = systemData.musalleen.find(m => m.barcode === barcodeNumber);
+            if (existingMusallee) {
+                showMessage(`رقم الباركود ${barcodeNumber} مستخدم بالفعل`, 'error');
+                return;
+            }
+
+            const musalleeId = Date.now().toString();
+            const newMusallee = {
+                id: musalleeId,
+                barcode: barcodeNumber,
+                name: name,
+                phone: phone || 'غير مسجل',
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser ? currentUser.email : 'guest',
+                isActive: true
+            };
+
+            // إضافة محلياً
+            systemData.musalleen.push(newMusallee);
+            saveLocalData();
+
+            // حفظ في السحابة إذا كان متصلاً
+            if (currentUser && mosqueId) {
+                try {
+                    await db.collection('mosques').doc(mosqueId)
+                        .collection('musalleen')
+                        .doc(musalleeId)
+                        .set(newMusallee);
+
+                    // تحديث إحصاءات المسجد
+                    await db.collection('mosques').doc(mosqueId).update({
+                        musalleenCount: firebase.firestore.FieldValue.increment(1),
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    showMessage('✅ تم حفظ الباركود في السحابة بنجاح', 'success');
+
+                } catch (error) {
+                    console.error('❌ خطأ في حفظ الباركود في السحابة:', error);
+                    showMessage('تم الحفظ محلياً فقط - خطأ في السحابة', 'warning');
+                }
+            } else {
+                showMessage('تم الحفظ محلياً فقط - غير متصل بالسحابة', 'info');
+            }
+
+            // تحديث الواجهة
+            updateDashboard();
+
+            // تفريغ الحقول
+            elements.musalleeName.value = '';
+            elements.musalleePhone.value = '';
+
+            // توليد رقم جديد
+            generateNewBarcodeNumber();
+        }
+
+        function downloadBarcode() {
+            const canvas = elements.barcodeCanvas;
+            const barcodeNumber = elements.previewBarcodeNumber.textContent;
+            const musalleeName = elements.previewMusalleeName.textContent;
+
+            const link = document.createElement('a');
+            link.download = `باركود_${barcodeNumber}_${musalleeName}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+
+            showMessage('✅ تم تحميل صورة الباركود', 'success');
+        }
+
+        function generateShareLink() {
+            const barcodeNumber = elements.previewBarcodeNumber.textContent;
+            const musalleeName = elements.previewMusalleeName.textContent;
+
+            // إنشاء رابط للهاتف
+            const baseUrl = window.location.origin + window.location.pathname;
+            const params = new URLSearchParams({
+                action: 'viewBarcode',
+                barcode: barcodeNumber,
+                name: musalleeName,
+                mosque: mosqueId || 'guest'
+            });
+
+            const shareLink = `${baseUrl}?${params.toString()}`;
+
+            // نسخ الرابط للحافظة
+            navigator.clipboard.writeText(shareLink).then(() => {
+                showMessage('✅ تم نسخ رابط المشاركة إلى الحافظة', 'success');
+            });
+        }
+
+        // ============================================
+        // إدارة المصلين في السحابة
+        // ============================================
+
+        async function refreshCloudData() {
+            if (!currentUser) {
+                showMessage('الرجاء تسجيل الدخول لتحديث البيانات', 'error');
+                return;
+            }
+
+            await loadCloudData();
+            showMessage('✅ تم تحديث البيانات من السحابة', 'success');
+        }
+
+        async function exportCloudData() {
+            if (!currentUser) {
+                showMessage('الرجاء تسجيل الدخول لتصدير البيانات', 'error');
+                return;
+            }
+
+            try {
+                const exportData = {
+                    mosqueId: mosqueId,
+                    exportDate: new Date().toISOString(),
+                    musalleen: systemData.musalleen,
+                    attendance: systemData.attendance,
+                    exportedBy: currentUser.email
+                };
+
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `مسجد_${mosqueId}_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+
+                showMessage('✅ تم تصدير البيانات من السحابة', 'success');
+
+            } catch (error) {
+                console.error('❌ خطأ في تصدير البيانات:', error);
+                showMessage('خطأ في تصدير البيانات', 'error');
+            }
+        }
+
+        async function importCloudData() {
+            // يمكن تنفيذ استيراد البيانات من ملف JSON
+            showMessage('للاستيراد، استخدم زر المزامنة مع السحابة', 'info');
+        }
+
+        function searchMusalleen() {
+            const searchTerm = elements.searchMusalleen.value.toLowerCase();
+            const filtered = systemData.musalleen.filter(musallee =>
+                musallee.name.toLowerCase().includes(searchTerm) ||
+                musallee.barcode.toLowerCase().includes(searchTerm) ||
+                (musallee.phone && musallee.phone.includes(searchTerm))
+            );
+
+            displayMusalleenList(filtered);
+        }
+
+        function displayMusalleenList(musalleenList) {
+            const container = elements.musalleenList;
+            const noData = elements.noMusalleen;
+
+            if (musalleenList.length === 0) {
+                container.innerHTML = '';
+                noData.style.display = 'block';
+                return;
+            }
+
+            noData.style.display = 'none';
+            container.innerHTML = '';
+
+            musalleenList.forEach(musallee => {
+                const card = document.createElement('div');
+                card.className = 'device-card';
+                card.innerHTML = `
+                            <div class="device-header">
+                                <div class="device-icon">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <h4 style="margin: 0;">${musallee.name}</h4>
+                                    <p style="color: #666; margin: 5px 0;">${musallee.barcode}</p>
+                                </div>
+                                <span style="background-color: ${musallee.isActive ? '#28a745' : '#dc3545'};
+                                      color: white; padding: 3px 10px; border-radius: 20px; font-size: 12px;">
+                                    ${musallee.isActive ? 'نشط' : 'غير نشط'}
+                                </span>
+                            </div>
+                            <div>
+                                <p><i class="fas fa-phone"></i> ${musallee.phone || 'غير مسجل'}</p>
+                                <p><i class="fas fa-calendar"></i> ${musallee.createdAt || 'غير معروف'}</p>
+                                <div style="display: flex; gap: 5px; margin-top: 10px;">
+                                    <button onclick="downloadMusalleeBarcode('${musallee.id}')" class="btn btn-sm btn-success" style="flex: 1;">
+                                        <i class="fas fa-download"></i> تحميل باركود
+                                    </button>
+                                    <button onclick="toggleMusalleeStatus('${musallee.id}')" class="btn btn-sm ${musallee.isActive ? 'btn-warning' : 'btn-info'}" style="flex: 1;">
+                                        <i class="fas fa-power-off"></i> ${musallee.isActive ? 'تعطيل' : 'تفعيل'}
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                container.appendChild(card);
+            });
+        }
+
+        window.downloadMusalleeBarcode = async function (id) {
+            const musallee = systemData.musalleen.find(m => m.id === id);
+            if (musallee) {
+                // إنشاء canvas مؤقت
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 150;
+
+                JsBarcode(canvas, musallee.barcode, {
+                    format: 'CODE128',
+                    width: 2,
+                    height: 60,
+                    displayValue: true,
+                    fontSize: 20,
+                    background: "#ffffff",
+                    lineColor: "#000000",
+                    margin: 10
+                });
+
+                const link = document.createElement('a');
+                link.download = `باركود_${musallee.barcode}_${musallee.name}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                showMessage(`✅ تم تحميل باركود ${musallee.name}`, 'success');
+            }
+        };
+
+        window.toggleMusalleeStatus = async function (id) {
+            const musallee = systemData.musalleen.find(m => m.id === id);
+            if (musallee) {
+                musallee.isActive = !musallee.isActive;
+
+                // تحديث محلياً
+                saveLocalData();
+
+                // تحديث في السحابة إذا كان متصلاً
+                if (currentUser && mosqueId) {
+                    try {
+                        await db.collection('mosques').doc(mosqueId)
+                            .collection('musalleen')
+                            .doc(id)
+                            .update({ isActive: musallee.isActive });
+                    } catch (error) {
+                        console.error('❌ خطأ في تحديث حالة المصلّي:', error);
+                    }
+                }
+
+                // تحديث العرض
+                searchMusalleen();
+                showMessage(`✅ تم ${musallee.isActive ? 'تفعيل' : 'تعطيل'} المصلّي ${musallee.name}`, 'success');
+            }
+        };
+
+        // ============================================
+        // التقارير من السحابة
+        // ============================================
+
+        function handleReportTypeChange() {
+            const type = elements.reportPeriod.value;
+            const isCustom = type === 'custom';
+            elements.reportFrom.style.display = isCustom ? 'block' : 'none';
+            elements.reportTo.style.display = isCustom ? 'block' : 'none';
+        }
+
+        async function generateReportFromCloud() {
+            if (!currentUser) {
+                showMessage('الرجاء تسجيل الدخول لعرض التقارير', 'error');
+                return;
+            }
+
+            const period = elements.reportPeriod.value;
+            let fromDate, toDate;
+            const today = new Date();
+
+            switch (period) {
+                case 'today':
+                    fromDate = today.toISOString().split('T')[0];
+                    toDate = fromDate;
+                    break;
+                case 'yesterday':
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    fromDate = yesterday.toISOString().split('T')[0];
+                    toDate = fromDate;
+                    break;
+                case 'week':
+                    fromDate = new Date(today);
+                    fromDate.setDate(fromDate.getDate() - 7);
+                    fromDate = fromDate.toISOString().split('T')[0];
+                    toDate = today.toISOString().split('T')[0];
+                    break;
+                case 'month':
+                    fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    fromDate = fromDate.toISOString().split('T')[0];
+                    toDate = today.toISOString().split('T')[0];
+                    break;
+                case 'custom':
+                    fromDate = elements.reportFrom.value;
+                    toDate = elements.reportTo.value;
+                    break;
+            }
+
+            try {
+                // جلب بيانات الحضور للفترة المحددة
+                const attendanceSnapshot = await db.collection('mosques').doc(mosqueId)
+                    .collection('attendance')
+                    .where('date', '>=', fromDate)
+                    .where('date', '<=', toDate)
+                    .get();
+
+                const attendanceData = [];
+                attendanceSnapshot.forEach(doc => {
+                    attendanceData.push(doc.data());
+                });
+
+                // إنشاء التقرير
+                generateReportUI(attendanceData, fromDate, toDate);
+
+            } catch (error) {
+                console.error('❌ خطأ في جلب بيانات التقرير:', error);
+                showMessage('خطأ في جلب بيانات التقرير', 'error');
+            }
+        }
+
+        function generateReportUI(attendanceData, fromDate, toDate) {
+            // إخفاء حالة عدم وجود بيانات
+            elements.noReport.style.display = 'none';
+            elements.reportTable.style.display = 'table';
+
+            // حساب الإحصائيات
+            const totalAttendance = attendanceData.length;
+            const uniqueMusalleen = [...new Set(attendanceData.map(r => r.musalleeId))].length;
+
+            // تحديث إحصائيات الملخص
+            elements.reportStats.innerHTML = `
+                        <div class="stat-box">
+                            <i class="fas fa-users"></i>
+                            <div class="stat-number">${totalAttendance}</div>
+                            <div class="stat-label">إجمالي الحضور</div>
+                        </div>
+                        <div class="stat-box">
+                            <i class="fas fa-user-friends"></i>
+                            <div class="stat-number">${uniqueMusalleen}</div>
+                            <div class="stat-label">مصلين متفردين</div>
+                        </div>
+                        <div class="stat-box">
+                            <i class="fas fa-calendar"></i>
+                            <div class="stat-number">${fromDate === toDate ? 'يوم واحد' : 'أيام متعددة'}</div>
+                            <div class="stat-label">فترة التقرير</div>
+                        </div>
+                        <div class="stat-box">
+                            <i class="fas fa-chart-line"></i>
+                            <div class="stat-number">${systemData.musalleen.length > 0 ? Math.round((uniqueMusalleen / systemData.musalleen.length) * 100) : 0}%</div>
+                            <div class="stat-label">نسبة المشاركة</div>
+                        </div>
+                    `;
+
+            // إنشاء جدول التقرير
+            elements.reportTableHeader.innerHTML = `
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>اسم المصلّي</th>
+                            <th>الصلاة</th>
+                            <th>الوقت</th>
+                            <th>رقم الباركود</th>
+                        </tr>
+                    `;
+
+            elements.reportTableBody.innerHTML = '';
+
+            // فرز البيانات حسب التاريخ والوقت
+            attendanceData.sort((a, b) => {
+                if (a.date === b.date) {
+                    return b.timestamp - a.timestamp;
+                }
+                return new Date(b.date) - new Date(a.date);
+            });
+
+            // إضافة الصفوف
+            attendanceData.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                            <td>${record.date}</td>
+                            <td>${record.name}</td>
+                            <td>${record.prayer}</td>
+                            <td>${record.time}</td>
+                            <td>${record.barcode}</td>
+                        `;
+                elements.reportTableBody.appendChild(row);
+            });
+        }
+
+        function downloadReport() {
+            const table = document.getElementById('report-table');
+            const html = table.outerHTML;
+
+            const blob = new Blob([`
+                        <!DOCTYPE html>
+                        <html dir="rtl">
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>تقرير حضور المسجد</title>
+                            <style>
+                                body { font-family: 'Cairo', sans-serif; padding: 20px; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                th { background-color: #1a5e1a; color: white; padding: 10px; text-align: right; }
+                                td { padding: 8px; border-bottom: 1px solid #ddd; }
+                                h1 { color: #1a5e1a; text-align: center; }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>تقرير حضور المسجد</h1>
+                            <p>تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</p>
+                            ${html}
+                        </body>
+                        </html>
+                    `], { type: 'text/html' });
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `تقرير_حضور_${new Date().toISOString().split('T')[0]}.html`;
+            link.click();
+
+            showMessage('✅ تم تنزيل التقرير', 'success');
+        }
+
+        // ============================================
+        // إدارة المزامنة والأجهزة
+        // ============================================
+
+        function generateQRCode() {
+            const phoneLink = generatePhoneLink();
+
+            // إنشاء QR Code
+            QRCode.toCanvas(elements.qrcodeContainer, phoneLink, {
+                width: 150,
+                height: 150,
+                margin: 1,
+                color: {
+                    dark: '#1a5e1a',
+                    light: '#ffffff'
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('❌ خطأ في توليد QR Code:', error);
+                    elements.qrcodeContainer.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>';
+                }
+            });
+
+            showMessage('✅ تم توليد QR Code للوصول السريع', 'success');
+        }
+
+        function generatePhoneLink() {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const params = new URLSearchParams({
+                mosque: mosqueId || 'guest',
+                mode: 'scanner',
+                source: 'qr'
+            });
+
+            const phoneLink = `${baseUrl}?${params.toString()}`;
+            elements.phoneLink.textContent = phoneLink;
+            return phoneLink;
+        }
+
+        function copyPhoneLink() {
+            const link = elements.phoneLink.textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                showMessage('✅ تم نسخ الرابط إلى الحافظة', 'success');
+            });
+        }
+
+        // ============================================
+        // وظائف مساعدة
+        // ============================================
+
+        function switchTab(tabId) {
+            // تحديث التبويبات
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabId);
+            });
+
+            // تحديث المحتوى
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `${tabId}-tab`);
+            });
+
+            // إجراءات خاصة لكل تبويب
+            if (tabId === 'manage') {
+                displayMusalleenList(systemData.musalleen);
+            } else if (tabId === 'sync') {
+                generatePhoneLink();
+            } else if (tabId === 'create') {
+                generateNewBarcodeNumber();
+            }
+        }
+
+        function updateDashboard() {
+            // إجمالي المصلين
+            elements.totalMusalleen.textContent = systemData.musalleen.length;
+
+            // حضور اليوم
+            const today = new Date().toISOString().split('T')[0];
+            const todayAttendance = systemData.attendance.filter(r => r.date === today);
+            elements.todayAttendance.textContent = todayAttendance.length;
+
+            // حضور الصلاة الحالية
+            updateCurrentPrayerCount();
+
+            // نسبة الحضور
+            const uniqueToday = new Set(todayAttendance.map(r => r.musalleeId)).size;
+            const attendanceRate = systemData.musalleen.length > 0 ?
+                Math.round((uniqueToday / systemData.musalleen.length) * 100) : 0;
+            elements.attendanceRate.textContent = `${attendanceRate}%`;
+        }
+
+        function updateCurrentPrayerCount() {
+            const today = new Date().toISOString().split('T')[0];
+            const currentPrayerCount = systemData.attendance.filter(r =>
+                r.date === today && r.prayer === systemData.settings.currentPrayer
+            ).length;
+            elements.currentPrayerCount.textContent = currentPrayerCount;
+        }
+
+        function updateAttendanceList() {
+            const attendanceList = elements.attendanceList;
+            const today = new Date().toISOString().split('T')[0];
+            const todayAttendance = systemData.attendance.filter(r => r.date === today);
+
+            if (todayAttendance.length === 0) {
+                attendanceList.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-clipboard-list"></i>
+                                <p>لم يتم تسجيل أي حضور بعد</p>
+                                <p>ابدأ بمسح باركود المصلين</p>
+                            </div>
+                        `;
+                return;
+            }
+
+            // عرض آخر 20 سجلاً فقط
+            const recentAttendance = todayAttendance.slice(0, 20);
+
+            attendanceList.innerHTML = '';
+            recentAttendance.forEach(record => {
+                addAttendanceToUI(record);
+            });
+        }
+
+        function addAttendanceToUI(record) {
+            const item = document.createElement('div');
+            item.className = 'attendance-item';
+            item.innerHTML = `
+                        <div class="avatar">${record.name.charAt(0)}</div>
+                        <div class="info">
+                            <div class="name">${record.name}</div>
+                            <div class="details">
+                                <span><i class="fas fa-clock"></i> ${record.time}</span>
+                                <span><i class="fas fa-pray"></i> ${record.prayer}</span>
+                                <span><i class="fas fa-barcode"></i> ${record.barcode}</span>
+                                ${record.synced ? '<span class="online-badge">مزامن</span>' : '<span class="offline-badge">محلي</span>'}
+                            </div>
+                        </div>
+                    `;
+            elements.attendanceList.appendChild(item);
+        }
+
+        function openManualEntry() {
+            elements.manualModal.style.display = 'flex';
+            elements.manualBarcodeInput.focus();
+        }
+
+        function submitManualEntry() {
+            const barcode = elements.manualBarcodeInput.value.trim().toUpperCase();
+            if (!barcode) {
+                showMessage('الرجاء إدخال رقم الباركود', 'error');
+                return;
+            }
+
+            const musallee = systemData.musalleen.find(m => m.barcode === barcode);
+            if (!musallee) {
+                showMessage('باركود غير مسجل في النظام', 'error');
+                return;
+            }
+
+            registerAttendance(musallee);
+            closeModal('manual-modal');
+        }
+
+        function showMessage(message, type) {
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107',
+                info: '#17a2b8'
+            };
+
+            elements.scannerResult.textContent = message;
+            elements.scannerResult.style.backgroundColor = colors[type] || colors.info;
+            elements.scannerResult.style.color = 'white';
+            elements.scannerResult.style.display = 'block';
+
+            setTimeout(() => {
+                elements.scannerResult.style.display = 'none';
+            }, 3000);
+        }
+
+        // ============================================
+        // بدء تشغيل النظام
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initSystem();
+        });
+    </script>
+</body>
+</html>
